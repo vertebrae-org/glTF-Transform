@@ -6,7 +6,7 @@ import { gzip } from 'node-gzip';
 import { program } from '@caporal/core';
 import { Logger, NodeIO, PropertyType, VertexLayout, vec2 } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
-import { CenterOptions, InstanceOptions, PartitionOptions, PruneOptions, QUANTIZE_DEFAULTS, ResampleOptions, SequenceOptions, TEXTURE_RESIZE_DEFAULTS, TextureResizeFilter, UnweldOptions, WeldOptions, center, dedup, instance, metalRough, partition, prune, quantize, resample, sequence, tangents, textureResize, unweld, weld } from '@gltf-transform/functions';
+import { CenterOptions, InstanceOptions, PartitionOptions, PruneOptions, QUANTIZE_DEFAULTS, ResampleOptions, SequenceOptions, SimplifyOptions, TEXTURE_RESIZE_DEFAULTS, TextureResizeFilter, UnweldOptions, WeldOptions, center, dedup, instance, metalRough, partition, prune, quantize, resample, sequence, simplify, tangents, textureResize, unweld, weld } from '@gltf-transform/functions';
 import { InspectFormat, inspect } from './inspect';
 import { AOOptions, DRACO_DEFAULTS, DracoCLIOptions, ETC1S_DEFAULTS, Filter, Mode, UASTC_DEFAULTS, ao, draco, ktxfix, merge, toktx, unlit } from './transforms';
 import { Session, formatBytes } from './util';
@@ -440,6 +440,27 @@ Requires KHR_mesh_quantization support.`.trim())
 	.action(({args, options, logger}) =>
 		Session.create(io, logger, args.input, args.output)
 			.transform(quantize(options))
+	);
+
+// SIMPLIFY
+program
+	.command('simplify', 'Simplify (decimate) mesh geometry')
+	.help(`
+TODO(docs): Write description.
+	`.trim())
+	.argument('<input>', INPUT_DESC)
+	.argument('<output>', OUTPUT_DESC)
+	.option('--target', 'Factor (0–1) by which to simplify the mesh.', {
+		validator: program.NUMBER,
+		default: 0.1,
+	})
+	.option('--distance-threshold', 'Threshold for collapsing disjoint vertices.', {
+		validator: program.NUMBER,
+		default: 0,
+	})
+	.action(({args, options, logger}) =>
+		Session.create(io, logger, args.input, args.output)
+			.transform(simplify(options as unknown as SimplifyOptions))
 	);
 
 // WELD

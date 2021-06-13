@@ -37,6 +37,7 @@ export * from './prune';
 export * from './quantize';
 export * from './resample';
 export * from './sequence';
+export * from './simplify';
 export * from './tangents';
 export * from './texture-resize';
 export * from './unweld';

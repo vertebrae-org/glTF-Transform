@@ -26,7 +26,9 @@
   "dependencies": {
     "@gltf-transform/core": "^0.11.3",
     "@gltf-transform/extensions": "^0.11.3",
+    "@types/heap": "^0.2.28",
     "gl-matrix": "^3.3.0",
+    "heap": "^0.2.6",
     "ndarray": "^1.0.19",
     "ndarray-lanczos": "^0.1.1",
     "ndarray-pixels": "^0.1.6"
