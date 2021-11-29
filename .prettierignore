@@ -1,4 +1,4 @@
-packages/functions/src/**
+# packages/functions/src/**
 packages/cli/src/**
 **/dist
 **/in
