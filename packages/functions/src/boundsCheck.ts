@@ -50,8 +50,6 @@ const getSumOfDimensions = (dimensions: Dimensions) => {
 	);
 };
 
-// const attemptRescale
-
 export const boundsCheck = (
 	boundsOptions: BoundsOptions,
 	errorModelValue: ErrorModelValue = {}
@@ -206,10 +204,8 @@ export const boundsCheck = (
 		} else {
 			//height check
 			if (heightDiff > maxDimensionDiff) {
-				if (!attemptRescale) {
-					errorModelValue.height = actualHeight;
-					errorModelValue.expectedHeight = expectedHeight;
-				}
+				errorModelValue.height = actualHeight;
+				errorModelValue.expectedHeight = expectedHeight;
 			}
 
 			if (!fitsXZDiff && !fitsZXDiff) {
