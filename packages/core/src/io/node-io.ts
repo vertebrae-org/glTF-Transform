@@ -4,8 +4,6 @@ import { JSONDocument } from '../json-document';
 import { GLTF } from '../types/gltf';
 import { BufferUtils, FileUtils } from '../utils/';
 import { PlatformIO } from './platform-io';
-import { GLTFReader } from './reader';
-import { GLTFWriter } from './writer';
 
 /**
  * # NodeIO
@@ -50,7 +48,7 @@ export class NodeIO extends PlatformIO {
 	constructor() {
 		super();
 		// Excluded from browser builds with 'package.browser' field.
-		this._fs = require('fs');
+		this._fs = require('fs/promises');
 		this._path = require('path');
 	}
 
@@ -59,18 +57,18 @@ export class NodeIO extends PlatformIO {
 	 */
 
 	/** Loads a local path and returns a {@link Document} instance. */
-	public read(uri: string): Document {
-		return this.readJSON(this.readAsJSON(uri));
+	public async read(uri: string): Promise<Document> {
+		return await this.readJSON(await this.readAsJSON(uri));
 	}
 
 	/** Loads a local path and returns a {@link JSONDocument} struct, without parsing. */
-	public readAsJSON(uri: string): JSONDocument {
+	public async readAsJSON(uri: string): Promise<JSONDocument> {
 		const isGLB = !!(uri.match(/\.glb$/) || uri.match(/^data:application\/octet-stream;/));
 		return isGLB ? this._readGLB(uri) : this._readGLTF(uri);
 	}
 
 	/** Writes a {@link Document} instance to a local path. */
-	public write(uri: string, doc: Document): void {
+	public async write(uri: string, doc: Document): Promise<void> {
 		const isGLB = !!uri.match(/\.glb$/);
 		isGLB ? this._writeGLB(uri, doc) : this._writeGLTF(uri, doc);
 	}
@@ -80,16 +78,17 @@ export class NodeIO extends PlatformIO {
 	 */
 
 	/** @internal */
-	protected _readResourcesExternal(jsonDoc: JSONDocument, dir: string): void {
+	private async _readResourcesExternal(jsonDoc: JSONDocument, dir: string): Promise<void> {
 		const images = jsonDoc.json.images || [];
 		const buffers = jsonDoc.json.buffers || [];
-		[...images, ...buffers].forEach((resource: GLTF.IBuffer | GLTF.IImage) => {
+		const resources = [...images, ...buffers].map(async (resource: GLTF.IBuffer | GLTF.IImage) => {
 			if (resource.uri && !resource.uri.match(/data:/)) {
 				const absURI = this._path.resolve(dir, resource.uri);
-				jsonDoc.resources[resource.uri] = BufferUtils.trim(this._fs.readFileSync(absURI));
+				jsonDoc.resources[resource.uri] = BufferUtils.trim(await this._fs.readFile(absURI));
 				this.lastReadBytes += jsonDoc.resources[resource.uri].byteLength;
 			}
 		});
+		await Promise.all(resources);
 	}
 
 	/**********************************************************************************************
@@ -97,33 +96,33 @@ export class NodeIO extends PlatformIO {
 	 */
 
 	/** @internal */
-	private _readGLB(uri: string): JSONDocument {
-		const buffer: Buffer = this._fs.readFileSync(uri);
+	private async _readGLB(uri: string): Promise<JSONDocument> {
+		const buffer: Buffer = await this._fs.readFile(uri);
 		const arrayBuffer = BufferUtils.trim(buffer);
 		this.lastReadBytes = arrayBuffer.byteLength;
 		const jsonDoc = this._binaryToJSON(arrayBuffer);
 		// Read external resources first, before Data URIs are replaced.
-		this._readResourcesExternal(jsonDoc, this._path.dirname(uri));
-		this._readResourcesInternal(jsonDoc);
+		await this._readResourcesExternal(jsonDoc, this._path.dirname(uri));
+		await this._readResourcesInternal(jsonDoc);
 		return jsonDoc;
 	}
 
 	/** @internal */
-	private _readGLTF(uri: string): JSONDocument {
+	private async _readGLTF(uri: string): Promise<JSONDocument> {
 		this.lastReadBytes = 0;
-		const jsonContent = this._fs.readFileSync(uri, 'utf8');
+		const jsonContent = await this._fs.readFile(uri, 'utf8');
 		this.lastReadBytes += jsonContent.length;
 		const jsonDoc = { json: JSON.parse(jsonContent), resources: {} } as JSONDocument;
 		// Read external resources first, before Data URIs are replaced.
-		this._readResourcesExternal(jsonDoc, this._path.dirname(uri));
-		this._readResourcesInternal(jsonDoc);
+		await this._readResourcesExternal(jsonDoc, this._path.dirname(uri));
+		await this._readResourcesInternal(jsonDoc);
 		return jsonDoc;
 	}
 
 	/** @internal */
-	private _writeGLTF(uri: string, doc: Document): void {
+	private async _writeGLTF(uri: string, doc: Document): Promise<void> {
 		this.lastWriteBytes = 0;
-		const { json, resources } = this.writeJSON(doc, {
+		const { json, resources } = await this.writeJSON(doc, {
 			format: Format.GLTF,
 			basename: FileUtils.basename(uri),
 		});
@@ -131,18 +130,19 @@ export class NodeIO extends PlatformIO {
 		const dir = path.dirname(uri);
 		const jsonContent = JSON.stringify(json, null, 2);
 		this.lastWriteBytes += jsonContent.length;
-		fs.writeFileSync(uri, jsonContent);
-		Object.keys(resources).forEach((resourceName) => {
+		await fs.writeFile(uri, jsonContent);
+		const pending = Object.keys(resources).map(async (resourceName) => {
 			const resource = Buffer.from(resources[resourceName]);
-			fs.writeFileSync(path.join(dir, resourceName), resource);
+			await fs.writeFile(path.join(dir, resourceName), resource);
 			this.lastWriteBytes += resource.byteLength;
 		});
+		await Promise.all(pending);
 	}
 
 	/** @internal */
-	private _writeGLB(uri: string, doc: Document): void {
-		const buffer = Buffer.from(this.writeBinary(doc));
-		this._fs.writeFileSync(uri, buffer);
+	private async _writeGLB(uri: string, doc: Document): Promise<void> {
+		const buffer = Buffer.from(await this.writeBinary(doc));
+		await this._fs.writeFile(uri, buffer);
 		this.lastWriteBytes = buffer.byteLength;
 	}
 }
