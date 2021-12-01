@@ -58,7 +58,7 @@ export class NodeIO extends PlatformIO {
 
 	/** Loads a local path and returns a {@link Document} instance. */
 	public async read(uri: string): Promise<Document> {
-		return await this.readJSON(await this.readAsJSON(uri));
+		return this.readJSON(await this.readAsJSON(uri));
 	}
 
 	/** Loads a local path and returns a {@link JSONDocument} struct, without parsing. */
@@ -70,7 +70,7 @@ export class NodeIO extends PlatformIO {
 	/** Writes a {@link Document} instance to a local path. */
 	public async write(uri: string, doc: Document): Promise<void> {
 		const isGLB = !!uri.match(/\.glb$/);
-		isGLB ? this._writeGLB(uri, doc) : this._writeGLTF(uri, doc);
+		await (isGLB ? this._writeGLB(uri, doc) : this._writeGLTF(uri, doc));
 	}
 
 	/**********************************************************************************************
