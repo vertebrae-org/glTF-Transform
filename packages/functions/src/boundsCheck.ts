@@ -107,8 +107,8 @@ export const boundsCheck = (
 		const fitsXZDiff = fitsXZWidth && fitsXZDepth;
 
 		//Rotated orientation
-		const widthZXDiff = expectedWidth - actualDepth;
-		const depthZXDiff = expectedDepth - actualWidth;
+		const widthZXDiff = Math.abs(expectedWidth - actualDepth);
+		const depthZXDiff = Math.abs(expectedDepth - actualWidth);
 		const averageZXDiff = (widthZXDiff + depthZXDiff) / 2;
 
 		const fitsZXWidth = widthZXDiff <= maxDimensionDiff;
