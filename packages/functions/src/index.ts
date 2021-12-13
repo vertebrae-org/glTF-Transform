@@ -55,3 +55,4 @@ export * from './tangents';
 export * from './texture-resize';
 export * from './unweld';
 export * from './weld';
+export * from './boundsCheck';
